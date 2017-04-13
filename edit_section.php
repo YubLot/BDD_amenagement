@@ -41,7 +41,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 	#Tableau de données :
 	$tabExt = array('jpg','gif','png','jpeg','JPG','PNG');    // Extensions autorisees
-	$infosImg = array();
+	$extensions_autorisees = array();
 
 
 	$nom_erreur = $ville_erreur = $topographie_erreur = $contexte_erreur = "";
@@ -87,10 +87,14 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 			$SQL = "UPDATE sections SET nom = '$nom', ville = '$ville', pays = '$pays', largeur = $largeur_max, topographie = '$topographie', type = '$type', contexte = '$contexte', vitesse = $vitesse, descriptif = '$descriptif' WHERE id = $section_id";
 
 			#Si tous les champs obligatoires ont été remplis, alors on peut créer la fiche et rediriger vers celle-ci :
-			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte'])) {
+			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte']) AND empty($messages_erreur)) {
 				$bdd->query($SQL);
 				header("Refresh:0; url=section.php?id=$section_id");
-			} 
+			} else {
+				foreach ($messages_erreur as $erreur) {
+					echo $erreur . "<br>" ;
+				}
+			}
 
 		}
 
