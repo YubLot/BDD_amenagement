@@ -1,12 +1,12 @@
 		<?php
-
+#validationPhoto
 				  // On verifie si le champ est rempli
 				  if( !empty($_FILES['fichier']['name']) ) {
 				    // Recuperation de l'extension du fichier
 				    $extension  = pathinfo($_FILES['fichier']['name'], PATHINFO_EXTENSION);
 
 				    // On verifie l'extension du fichier
-				    if(in_array(strtolower($extension),$tabExt)) {#test
+				    if(in_array(strtolower($extension),$tabExt)) {
 				      // On verifie le type de l'image
 				      if($infosImg[2] >= 1 && $infosImg[2] <= 14) {
 				        // On verifie la taille de l'image
