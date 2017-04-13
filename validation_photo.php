@@ -1,7 +1,4 @@
 <?php
-#validationPhoto
-
-
 
 // On verifie si le champ est rempli
 if( !empty($_FILES['fichier']['name']) ) {
