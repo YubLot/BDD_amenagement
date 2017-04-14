@@ -119,7 +119,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 			$SQL = "INSERT INTO sections (nom, ville, pays, largeur, topographie, type, contexte, vitesse, descriptif) VALUES ('$nom', '$ville', '$pays', $largeur_max, '$topographie', '$type', '$contexte', $vitesse, '$descriptif')";
 
 			#Si tous les champs obligatoires ont été remplis, alors on peut créer la fiche et rediriger vers la dernière fiche créée :
-			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte'])) {
+			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte']) AND empty($messages_erreur)) {
 
 				$bdd->query($SQL);
 
@@ -129,7 +129,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 				#On invoque ici la procédure de validation de la photo car on a besoin du $lastId pour nommer la photo :
 				require('validation_photo.php');
-				header("Refresh:0; url=section.php?id=$lastId");
+				header("Refresh:0; url=section.php?id=$section_id");
 
 			} 
 		} 		
