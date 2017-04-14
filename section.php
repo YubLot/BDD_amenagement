@@ -5,9 +5,13 @@ include('creer_miniatures.php');
 
 $section_id = $_GET['id'];
 $requete_section = $bdd->query("SELECT * FROM sections WHERE id = $section_id");
-$requete_section->execute();
+#$requete_section->execute();
 
 $section = $requete_section->fetch();
+
+$requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_id");
+$photos = $requete_photos->fetch();
+
 
 ?>
 
@@ -38,6 +42,7 @@ $section = $requete_section->fetch();
 	</div>
 	<p><?php echo $section['descriptif']; ?></p>
 	<img src="photos/<?php echo $section['id'] ?>"><br>
+	<img src="photos/<?php echo $photos['nom'] ?>"><br>
 
 	<a href="edit_section.php?action=modifier&id=<?php echo $section_id ?>">Modifier la section.</a>
 </article>

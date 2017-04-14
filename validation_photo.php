@@ -1,42 +1,29 @@
 <?php
 
-// On verifie si le champ est rempli
-if( !empty($_FILES['fichier']['name']) ) {
+		// On verifie si le champ est rempli
+		if( !empty($_FILES[$photo_id]['name']) ) {
+			// Recuperation de l'extension du fichier
+			$extension  = pathinfo($_FILES[$photo_id]['name'], PATHINFO_EXTENSION);
+			// On verifie l'extension du fichier
+			if(!in_array(strtolower($extension),$tabExt)) {
+				$erreurs_photo[] = 'Type de fichier non autorisé.';
+			}
+			// On verifie la taille de l'image
+			if($_FILES[$photo_id]['size'] >= 1048576) {
+				$erreurs_photo[] = 'Fichier trop gros.';
+			}
+			// Parcours du tableau d'erreurs
+			if(isset($_FILES[$photo_id]['error']) && UPLOAD_ERR_OK === $_FILES[$photo_id]['error']) {
+				#RAS
+			} else {
+				$erreurs_photo[] = 'ERREUR';
+			}
+			// On renomme le fichier
+			$nomImage = $photo_id .'.'. $extension;
 
-	// Recuperation de l'extension du fichier
-	$extension  = pathinfo($_FILES['fichier']['name'], PATHINFO_EXTENSION);
-
-	// On verifie l'extension du fichier
-	if(!in_array(strtolower($extension),$tabExt)) {
-		$messages_erreur[] = 'Type de fichier non autorisé.';
-	}
-
-	// On verifie la taille de l'image
-	if(((filesize($_FILES['fichier']['tmp_name']) >= MAX_SIZE))) {
-		$messages_erreur[] = 'Fichier trop gros.';
-	}
-
-	// Parcours du tableau d'erreurs
-	if(isset($_FILES['fichier']['error']) && UPLOAD_ERR_OK === $_FILES['fichier']['error']) {
-		#RAS
-	} else {
-		$messages_erreur[] = 'ERREUR';
-	}
-
-	// On renomme le fichier
-	$nomImage = $section_id .'.'. $extension;
-
-	if (empty($messages_erreur)) {
-		move_uploaded_file($_FILES['fichier']['tmp_name'], TARGET.$nomImage);
-	}
-
-
-} else {
-
-	$messages_erreur[] = 'Aucun fichier transmis';
-
-}
-
+		} else {
+			$erreurs_photo[] = 'Aucun fichier transmis';
+		}
 
 ?>
 
