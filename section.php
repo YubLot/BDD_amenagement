@@ -10,7 +10,7 @@ $requete_section = $bdd->query("SELECT * FROM sections WHERE id = $section_id");
 $section = $requete_section->fetch();
 
 $requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_id");
-$photos = $requete_photos->fetch();
+#$photos = $requete_photos->fetch();
 
 
 ?>
@@ -42,7 +42,14 @@ $photos = $requete_photos->fetch();
 	</div>
 	<p><?php echo $section['descriptif']; ?></p>
 	<img src="photos/<?php echo $section['id'] ?>"><br>
-	<img src="photos/<?php echo $photos['nom'] ?>"><br>
+	<?php
+
+	while ($photos = $requete_photos->fetch()) {
+		$photo_nom = $photos['nom'];
+ 		echo "<img src='photos/$photo_nom'><br>";
+ 	} 
+	
+	?>
 
 	<a href="edit_section.php?action=modifier&id=<?php echo $section_id ?>">Modifier la section.</a>
 </article>

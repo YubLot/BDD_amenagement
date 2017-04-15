@@ -36,32 +36,32 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 	$message = '';
 	$nomImage = '';
 
-	function validation_photo ($photo_id) {
+	function validation_photo ($nom_champ_photo) {
 
 		global $nomImage;
 
-		if (!empty($_FILES['photo1']['name'])) {
+		if (!empty($_FILES[$nom_champ_photo]['name'])) {
 
 			$tabExt = array('jpg','gif','png','jpeg');    // Extensions autorisees
 
 				// Recuperation de l'extension du fichier
-				$extension  = pathinfo($_FILES[$photo_id]['name'], PATHINFO_EXTENSION);
+				$extension  = pathinfo($_FILES[$nom_champ_photo]['name'], PATHINFO_EXTENSION);
 				// On verifie l'extension du fichier
 				if(!in_array(strtolower($extension), $tabExt)) {
 					$erreurs_photo[] = 'Type de fichier non autorisé.';
 				}
 				// On verifie la taille de l'image
-				if($_FILES[$photo_id]['size'] >= 1048576) {
+				if($_FILES[$nom_champ_photo]['size'] >= 1048576) {
 					$erreurs_photo[] = 'Fichier trop gros.';
 				}
 				// Parcours du tableau d'erreurs
-				if(isset($_FILES[$photo_id]['error']) && UPLOAD_ERR_OK === $_FILES[$photo_id]['error']) {
+				if(isset($_FILES[$nom_champ_photo]['error']) && UPLOAD_ERR_OK === $_FILES[$nom_champ_photo]['error']) {
 					#RAS
 				} else {
 					$erreurs_photo[] = 'ERREUR';
 				}
 				// On renomme le fichier
-				$nomImage = $photo_id .'.'. $extension;
+				$nomImage = $nom_champ_photo .'.'. $extension;
 
 		}
 		#Si on est en train d'ajouter une section, alors l'absence de photo est considérée comme une erreur :
@@ -115,36 +115,54 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 			#Invoque la procédure de validation depuis le fichier validation.php :
 			require('validation.php');
 
-			#On exécute la procédure de validation des photos :
-			validation_photo('photo1');
-
 			#On compose la requête avec ces données :
 			$SQL = "UPDATE sections SET nom = '$nom', ville = '$ville', pays = '$pays', largeur = $largeur_max, topographie = '$topographie', type = '$type', contexte = '$contexte', vitesse = $vitesse, descriptif = '$descriptif' WHERE id = $section_id";
 
-			#On récupère les données des photos pour insérer ou modifier :
-			$requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_id");
-			$photos = $requete_photos->fetch();
+			$functions_MUF = array();
+			
+			$champs_photos = array(1,2,3);
+			foreach ($champs_photos as $numPhoto) {
 
-			if (!empty($photos['id'])) {
-				$idPhoto = $photos['id'];
-			} else {
-				$idPhoto = 'NULL';
+				#Pour chaque photo téléversée, on vérifie qu'il n'y a pas d'erreur :
+				$nom_champ_photo = 'photo' . $numPhoto;
+				$erreurs_photo = validation_photo($nom_champ_photo);
+
+				#On regarde dans la base s'il existe une photo pour cette section et ce numéro de photo (de champ) :
+				$SELECT_photo = $bdd->query("SELECT * FROM photos WHERE refSection = $section_id AND numPhoto = $numPhoto");
+				$photo_bdd = $SELECT_photo->fetch();
+				if (!empty($photo_bdd['id'])) {
+					#S'il y a déjà une photo dans la bdd, on fixe l'$idPhoto égal à celui-ci pour que la procédure passe à UPDATE (et non INSERT) :
+					$idPhoto = $photo_bdd['id'];
+				} else {
+					#S'il n'y a pas de photo dans la bdd, on fixe l'$idPhoto à NULL pour que la procédure passe à INSERT (et non UPDATE) :
+					$idPhoto = 'NULL';
+				}
+
+				#On génère un nom de photo avec l'identifiant de la section et le nom du champ photo1, photo2 ou photo3, que l'on a récupéré de la fonction validation_photo() :
+				$nomImage_complet = $section_id . "_" . $nomImage;
+
+				#On prépare la requête (insérée dans une chaine de requêtes du coup) : INSERST s'il n'y a pas de doublon, UDPATE sinon :
+				$SQL_photos[] = "INSERT INTO photos (id, refSection, numPhoto, nom) VALUES ($idPhoto, $section_id, $numPhoto, '$nomImage_complet') ON DUPLICATE KEY UPDATE nom = '$nomImage_complet'";
+
+				$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], "photos/" . $nomImage_complet);
+
 			}
 
-			#On génère un nom de photo avec l'identifiant de la section et du champ 1, 2 ou 3 :
-			$nomImage_complet = $section_id . "_" . $nomImage;
-			#La requête : INSERST s'il n'y a pas de doublon, UDPATE sinon :
-			$SQL_insertPhotos = "INSERT INTO photos (id, refSection, nom) VALUES ($idPhoto, $section_id, '$nomImage_complet') ON DUPLICATE KEY UPDATE nom = '$nomImage_complet'";
 
+			
 			#Si tous les champs obligatoires ont été remplis, alors on peut modifier la section et rediriger vers celle-ci :
 			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte']) AND empty($erreurs_photo)) {
 
 				$bdd->query($SQL);
 
-				#Si une nouvelle photo a été téléversée, on met à jour le serveur et la base :
-				if (!empty($_FILES['photo1']['name'])) {
-					$bdd->query($SQL_insertPhotos);
-					move_uploaded_file($_FILES['photo1']['tmp_name'], "photos/" . $nomImage_complet);
+				#Pour chaque champ de photo, on exécute la requête préparée :
+				foreach ($SQL_photos as $UPDATE_INSERT_photo) {
+					$bdd->query($UPDATE_INSERT_photo);
+				}
+
+				#Crées les photos sur le serveur :
+				foreach ($functions_MUF as $MUF) {
+					$MUF;
 				}
 
 				header("Refresh:0; url=section.php?id=$section_id");
@@ -183,6 +201,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 			#On invoque la procédure de validation des photos :
 			$erreurs_photo = validation_photo('photo1');
+			$erreurs_photo = validation_photo('photo2');
 
 			#Si tous les champs obligatoires ont été remplis, alors on peut créer la fiche et rediriger vers la dernière fiche créée :
 			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte']) AND !empty($_FILES['photo1']['name']) AND empty($erreurs_photo)) {
@@ -233,7 +252,9 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 	<form method="post" id="formulaire_section" enctype="multipart/form-data" action="<?php echo htmlspecialchars($_SERVER['PHP_SELF']) . $action_suffixe ?>">
 
-		<label>Photo 1 : <input name="photo1" type="file"/></label><br>
+		<label>Photo 1 (couverture) : <input name="photo1" type="file"/></label><br>
+		<label>Photo 2 : <input name="photo2" type="file"/></label><br>
+		<label>Photo 3 : <input name="photo3" type="file"/></label><br>
 
 		<label>nom de la rue : <input type="text" name="nom" value="<?php echo $nom ?>"></label>
 		<span class="erreur"> * <?php echo $nom_erreur;?></span><br>
