@@ -41,12 +41,11 @@ $requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_
 			<li><?php echo $section['vitesse'] . " km/h"; ?></li>
 	</div>
 	<p><?php echo $section['descriptif']; ?></p>
-	<img src="photos/<?php echo $section['id'] ?>"><br>
 	<?php
 
 	while ($photos = $requete_photos->fetch()) {
 		$photo_nom = $photos['nom'];
- 		echo "<img src='photos/$photo_nom'><br>";
+ 		echo "<img src='photos/$photo_nom'>";
  	} 
 	
 	?>

@@ -39,10 +39,11 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 	function validation_photo ($nom_champ_photo) {
 
 		global $nomImage;
+		global $pas_de_photo;
 
 		if (!empty($_FILES[$nom_champ_photo]['name'])) {
 
-			$tabExt = array('jpg','gif','png','jpeg');    // Extensions autorisees
+			$tabExt = array('jpg','jpeg');    // Extensions autorisees
 
 				// Recuperation de l'extension du fichier
 				$extension  = pathinfo($_FILES[$nom_champ_photo]['name'], PATHINFO_EXTENSION);
@@ -51,7 +52,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 					$erreurs_photo[] = 'Type de fichier non autorisé.';
 				}
 				// On verifie la taille de l'image
-				if($_FILES[$nom_champ_photo]['size'] >= 1048576) {
+				if($_FILES[$nom_champ_photo]['size'] >= 10/*1048576*/) {
 					$erreurs_photo[] = 'Fichier trop gros.';
 				}
 				// Parcours du tableau d'erreurs
@@ -67,13 +68,21 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 		#Si on est en train d'ajouter une section, alors l'absence de photo est considérée comme une erreur :
 		elseif ($_GET['action'] == 'ajouter') {
 			$erreurs_photo[] = 'Aucune photo sélectionnée !';
+		} 
+		#Si on est en train de modifier une section, alors l'absence de photo n'est pas une erreur mais doit être signalée :
+		elseif ($_GET['action'] == 'modifier') {
+			if (empty($_FILES[$nom_champ_photo]['name'])) {
+				$pas_de_photo = true;
+			} else {
+				echo "pas de photo (fonction) = ";
+			}
 		}
 
-		if (!empty($erreurs_photo)) {
-			return $erreurs_photo;
-		} else {
-			return "";
-		}
+			if (!empty($erreurs_photo)) {
+				return $erreurs_photo;
+			} else {
+				return "";
+			}
 		
 	}
 
@@ -138,16 +147,21 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 					$idPhoto = 'NULL';
 				}
 
-				#On génère un nom de photo avec l'identifiant de la section et le nom du champ photo1, photo2 ou photo3, que l'on a récupéré de la fonction validation_photo() :
+				#On génère un nom de photo avec l'identifiant de la section et le nom du champ photo1, photo2 ou photo3, que l'on a récupéré de la fonction validation_photo :
 				$nomImage_complet = $section_id . "_" . $nomImage;
 
-				#On prépare la requête (insérée dans une chaine de requêtes du coup) : INSERST s'il n'y a pas de doublon, UDPATE sinon :
-				$SQL_photos[] = "INSERT INTO photos (id, refSection, numPhoto, nom) VALUES ($idPhoto, $section_id, $numPhoto, '$nomImage_complet') ON DUPLICATE KEY UPDATE nom = '$nomImage_complet'";
-
-				$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], "photos/" . $nomImage_complet);
+				#Si aucune photo n'est téléversée, on ne fait rien, sinon, on prépare les requêtes et la fonction :
+				if ($pas_de_photo) {
+					$SQL_photos[] = "";
+					$functions_MUF[] = "";
+				} else {
+					#On prépare la requête (insérée dans une chaine de requêtes du coup) : INSERST s'il n'y a pas de doublon, UDPATE sinon :
+					$SQL_photos[] = "INSERT INTO photos (id, refSection, numPhoto, nom) VALUES ($idPhoto, $section_id, $numPhoto, '$nomImage_complet') ON DUPLICATE KEY UPDATE nom = '$nomImage_complet'";
+					#Et on prépare la fonction move_uploaded_file qui va créer la photo dans le server :
+					$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], "photos/" . $nomImage_complet);
+				}
 
 			}
-
 
 			
 			#Si tous les champs obligatoires ont été remplis, alors on peut modifier la section et rediriger vers celle-ci :
@@ -157,15 +171,19 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 				#Pour chaque champ de photo, on exécute la requête préparée :
 				foreach ($SQL_photos as $UPDATE_INSERT_photo) {
-					$bdd->query($UPDATE_INSERT_photo);
+					if (!empty($UPDATE_INSERT_photo)) {
+						$bdd->query($UPDATE_INSERT_photo);
+					}	
 				}
 
 				#Crées les photos sur le serveur :
 				foreach ($functions_MUF as $MUF) {
-					$MUF;
+					if (!empty($MUF)) {
+						$MUF;
+					}
 				}
 
-				header("Refresh:0; url=section.php?id=$section_id");
+				#header("Refresh:0; url=section.php?id=$section_id");
 
 			} else {
 				foreach ($erreurs_photo as $erreur) {
