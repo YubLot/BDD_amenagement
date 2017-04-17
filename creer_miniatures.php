@@ -20,7 +20,12 @@ function creer_miniatures($src, $dest, $desired_width) {
 	imagejpeg($virtual_image, $dest);
 }
 
-chdir("photos");
+$repertoire_photos_section = "photos/$idSection/thumbs/";
+	if (!is_dir($repertoire_photos_section)) {
+		mkdir($repertoire_photos_section);
+	}
+
+chdir("photos/$idSection");
 foreach(glob('*.*') as $photo) {
 	creer_miniatures($photo, "thumbs/". $photo, 300);
 }

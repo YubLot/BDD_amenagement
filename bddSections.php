@@ -1,7 +1,5 @@
 <?php
 $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root','',array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
-
-include('creer_miniatures.php');
 ?>
 
 
@@ -89,16 +87,17 @@ include('creer_miniatures.php');
 		}
 
 	$requete_sections = $bdd->query("SELECT * FROM sections $WHERE");
-	$requete_sections->execute();
 
 	while ($sections = $requete_sections->fetch()) {
+
+		$idSection = $sections['id'];
 	?>
-		<a href="section.php?id=<?php echo $sections['id'];?>" target="_BLANK">
+		<a href="section.php?id=<?php echo $idSection;?>" target="_BLANK">
 			<div class='dalle'>
 				<div>
 					<?php echo $sections['nom'] . " (" . $sections['ville'] . ")";?>
 				</div>
-				<img src='photos/thumbs/<?php echo $sections['id'] ?>'/>
+				<img src='photos/<?php echo $idSection ?>/thumbs/photo1'/>
 			</div>
 		</a>
 	<?php
@@ -111,7 +110,11 @@ include('creer_miniatures.php');
 
 	<div class="dalle">
 		<div>
-			<a href="edit_section.php?action=ajouter">Ajouter une section</a>
+			<a href="nouvelle_section.php">Ajouter une section</a>
+			<form method="POST" action="nouvelle_section.php">
+				<label>nom : <input type="text" name="nom_section"></label>
+				<input type="submit" name="creer_section">
+			</form>
 		</div>
 	</div>
 </article>

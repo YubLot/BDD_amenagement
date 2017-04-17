@@ -1,17 +1,14 @@
 <?php
 $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root','',array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION));
 
-include('creer_miniatures.php');
+$idSection = $_GET['id'];
 
-$section_id = $_GET['id'];
-$requete_section = $bdd->query("SELECT * FROM sections WHERE id = $section_id");
-#$requete_section->execute();
-
+$requete_section = $bdd->query("SELECT * FROM sections WHERE id = $idSection");
 $section = $requete_section->fetch();
 
-$requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_id");
-#$photos = $requete_photos->fetch();
+$requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $idSection");
 
+include('creer_miniatures.php');
 
 ?>
 
@@ -45,12 +42,12 @@ $requete_photos = $bdd->query("SELECT * FROM photos WHERE refSection = $section_
 
 	while ($photos = $requete_photos->fetch()) {
 		$photo_nom = $photos['nom'];
- 		echo "<img src='photos/$photo_nom'>";
+ 		echo "<img src='photos/$idSection/$photo_nom'>";
  	} 
 	
 	?>
 
-	<a href="edit_section.php?action=modifier&id=<?php echo $section_id ?>">Modifier la section.</a>
+	<a href="modif_section.php?id=<?php echo $idSection ?>">Modifier la section.</a>
 </article>
 
 </body>

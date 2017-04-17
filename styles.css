@@ -48,7 +48,7 @@ footer {
 }
 
 img {
-	max-width: 20vw;
+	max-width: 15vw;
 	display: inline-block;
 }
 
@@ -63,4 +63,4 @@ img {
 
 #donnees_tech {
 	float: right;
-}
+}vw

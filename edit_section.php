@@ -40,23 +40,24 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 		global $nomImage;
 		global $pas_de_photo;
+		global $erreurs_photo;
 
-		if (!empty($_FILES[$nom_champ_photo]['name'])) {
+		if (!empty($_FILES["$nom_champ_photo"]['name'])) {
 
 			$tabExt = array('jpg','jpeg');    // Extensions autorisees
 
 				// Recuperation de l'extension du fichier
-				$extension  = pathinfo($_FILES[$nom_champ_photo]['name'], PATHINFO_EXTENSION);
+				$extension  = pathinfo($_FILES["$nom_champ_photo"]['name'], PATHINFO_EXTENSION);
 				// On verifie l'extension du fichier
 				if(!in_array(strtolower($extension), $tabExt)) {
 					$erreurs_photo[] = 'Type de fichier non autorisé.';
 				}
 				// On verifie la taille de l'image
-				if($_FILES[$nom_champ_photo]['size'] >= 10/*1048576*/) {
+				if($_FILES["$nom_champ_photo"]['size'] >= 1048576) {
 					$erreurs_photo[] = 'Fichier trop gros.';
 				}
 				// Parcours du tableau d'erreurs
-				if(isset($_FILES[$nom_champ_photo]['error']) && UPLOAD_ERR_OK === $_FILES[$nom_champ_photo]['error']) {
+				if(isset($_FILES["$nom_champ_photo"]['error']) && UPLOAD_ERR_OK === $_FILES["$nom_champ_photo"]['error']) {
 					#RAS
 				} else {
 					$erreurs_photo[] = 'ERREUR';
@@ -65,38 +66,33 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 				$nomImage = $nom_champ_photo .'.'. $extension;
 
 		}
-		#Si on est en train d'ajouter une section, alors l'absence de photo est considérée comme une erreur :
-		elseif ($_GET['action'] == 'ajouter') {
-			$erreurs_photo[] = 'Aucune photo sélectionnée !';
-		} 
-		#Si on est en train de modifier une section, alors l'absence de photo n'est pas une erreur mais doit être signalée :
-		elseif ($_GET['action'] == 'modifier') {
-			if (empty($_FILES[$nom_champ_photo]['name'])) {
-				$pas_de_photo = true;
-			} else {
-				echo "pas de photo (fonction) = ";
-			}
+
+		#L'absence de photo n'est pas une erreur mais doit être signalée :
+		if (empty($_FILES["$nom_champ_photo"]['name'])) {
+			$pas_de_photo = true;
 		}
 
-			if (!empty($erreurs_photo)) {
-				return $erreurs_photo;
-			} else {
-				return "";
-			}
-		
+		if (!empty($erreurs_photo)) {
+			return $erreurs_photo;
+		} else {
+			return "";
+		}
+
 	}
 
 
 	$nom_erreur = $ville_erreur = $topographie_erreur = $contexte_erreur = "";
 
+	$champs_photos = array(1,2,3);
+
+	#Récupère l'identifiant de la fiche en cours de modification :
+	if (isset($_GET['id'])) {
+		$section_id = $_GET['id'];
+	}
+
 	#/// MODIFIER /// MODIFIER /// MODIFIER /// MODIFIER /// MODIFIER /// MODIFIER /// 
 
 	if (isset($_GET['action']) AND $_GET['action'] == 'modifier') {
-		
-		#Récupère l'identifiant de la fiche en cours de modification :
-		if (isset($_GET['id'])) {
-			$section_id = $_GET['id'];
-		}
 
 		#On indique au formulaire qu'en cas d'erreur, nous sommes dans une modification :
 		$action_suffixe = '?action=modifier&id=' . $section_id;
@@ -126,10 +122,7 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 
 			#On compose la requête avec ces données :
 			$SQL = "UPDATE sections SET nom = '$nom', ville = '$ville', pays = '$pays', largeur = $largeur_max, topographie = '$topographie', type = '$type', contexte = '$contexte', vitesse = $vitesse, descriptif = '$descriptif' WHERE id = $section_id";
-
-			$functions_MUF = array();
 			
-			$champs_photos = array(1,2,3);
 			foreach ($champs_photos as $numPhoto) {
 
 				#Pour chaque photo téléversée, on vérifie qu'il n'y a pas d'erreur :
@@ -147,18 +140,21 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 					$idPhoto = 'NULL';
 				}
 
-				#On génère un nom de photo avec l'identifiant de la section et le nom du champ photo1, photo2 ou photo3, que l'on a récupéré de la fonction validation_photo :
-				$nomImage_complet = $section_id . "_" . $nomImage;
-
 				#Si aucune photo n'est téléversée, on ne fait rien, sinon, on prépare les requêtes et la fonction :
 				if ($pas_de_photo) {
 					$SQL_photos[] = "";
 					$functions_MUF[] = "";
 				} else {
+					if (empty($erreurs_photo)) {
 					#On prépare la requête (insérée dans une chaine de requêtes du coup) : INSERST s'il n'y a pas de doublon, UDPATE sinon :
-					$SQL_photos[] = "INSERT INTO photos (id, refSection, numPhoto, nom) VALUES ($idPhoto, $section_id, $numPhoto, '$nomImage_complet') ON DUPLICATE KEY UPDATE nom = '$nomImage_complet'";
+					$SQL_photos[] = "INSERT INTO photos (id, refSection, numPhoto, nom) VALUES ($idPhoto, $section_id, $numPhoto, '$nomImage') ON DUPLICATE KEY UPDATE nom = '$nomImage'";
 					#Et on prépare la fonction move_uploaded_file qui va créer la photo dans le server :
-					$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], "photos/" . $nomImage_complet);
+					$repertoire_photos_section = "photos/$section_id/";
+					if (!is_dir($repertoire_photos_section)) {
+						mkdir($repertoire_photos_section);
+					}
+					$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], $repertoire_photos_section.$nomImage);
+					}
 				}
 
 			}
@@ -183,11 +179,11 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 					}
 				}
 
-				#header("Refresh:0; url=section.php?id=$section_id");
+				header("Refresh:0; url=section.php?id=$section_id");
 
 			} else {
 				foreach ($erreurs_photo as $erreur) {
-					echo $erreur . "<br>" ;
+					echo $nom_champ_photo . " : " . $erreur . "<br>" ;
 				}
 			}
 
@@ -199,14 +195,12 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 	
 	elseif (isset($_GET['action']) AND $_GET['action'] == 'ajouter') {
 
+		$action_suffixe = '?action=ajouter&id=0';
+
 		#Indique la procédure à l'utilisateur :
 		echo "<h1>" . "Nouvelle section" . "</h1>";
 
 		$nom = $ville = $pays = $largeur_max = $topographie = $type = $contexte = $vitesse = $descriptif = "";
-		
-
-		#On indique au formulaire qu'en cas d'erreur, nous sommes dans un ajout :
-		$action_suffixe = '?action=ajouter';
 
 		#Vérifier les valeurs saisies :
 		if (isset($_POST['enregistrer'])) {
@@ -217,40 +211,77 @@ $bdd = new PDO('mysql:host=localhost;dbname=amenagements;charset=utf8','root',''
 			#On compose la requête avec ces données :
 			$SQL = "INSERT INTO sections (nom, ville, pays, largeur, topographie, type, contexte, vitesse, descriptif) VALUES ('$nom', '$ville', '$pays', $largeur_max, '$topographie', '$type', '$contexte', $vitesse, '$descriptif')";	
 
-			#On invoque la procédure de validation des photos :
-			$erreurs_photo = validation_photo('photo1');
-			$erreurs_photo = validation_photo('photo2');
-
 			#Si tous les champs obligatoires ont été remplis, alors on peut créer la fiche et rediriger vers la dernière fiche créée :
-			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte']) AND !empty($_FILES['photo1']['name']) AND empty($erreurs_photo)) {
+			if (!empty($_POST['nom']) AND !empty($_POST['ville']) AND !empty($_POST['topographie']) AND !empty($_POST['contexte'])) {
 
-				$bdd->query($SQL);
+				if (empty($section_id) OR $section_id < 1) {
+					$bdd->query($SQL);
+				}
+
 
 				$last_section = $bdd->query("SELECT MAX(id) AS maxId FROM sections");
 				$fetch_last_section = $last_section->fetch();
 				$section_id = $fetch_last_section['maxId'];
+				$action_suffixe = '?action=ajouter&id='.$section_id;
 
-				#On génère un nom de photo avec l'identifiant de la section et du champ 1, 2 ou 3 :
-				$nomImage_complet = $section_id . "_" . $nomImage;
+				#On...
+				foreach ($champs_photos as $numPhoto) {
 
-				#On crée les métadonnées de la photo dans la BDD :
-				$SQL_insertPhotos = "INSERT INTO photos (refSection, nom) VALUES ($section_id, '$nomImage_complet')";
-				$bdd->query($SQL_insertPhotos);
-				#On stocke la photo sur le server :
-				move_uploaded_file($_FILES['photo1']['tmp_name'], "photos/" . $nomImage_complet);
+					#Pour chaque photo téléversée, on vérifie qu'il n'y a pas d'erreur :
+					$nom_champ_photo = 'photo' . $numPhoto;
+					$erreurs_photo = validation_photo($nom_champ_photo);
 
-				
-				#On invoque ici la procédure de validation de la photo car on a besoin du $lastId pour nommer la photo :
-				header("Refresh:0; url=section.php?id=$section_id");
+					#Si aucune photo n'est téléversée, on ne fait rien, sinon, on prépare les requêtes et la fonction :
+					if ($pas_de_photo) {
 
-			} elseif (!empty($erreurs_photo)) {
-				foreach ($erreurs_photo as $erreur_photo) {
-					echo $erreur_photo . "<br>";
+						$SQL_photos[] = "";
+						$functions_MUF[] = "";
+
+					} else {
+
+						if (empty($erreurs_photo)) {
+
+							#On prépare la requête (insérée dans une chaine de requêtes du coup) : INSERST s'il n'y a pas de doublon, UDPATE sinon :
+							$SQL_photos[] = "INSERT INTO photos (refSection, numPhoto, nom) VALUES ($section_id, $numPhoto, '$nomImage')";
+
+							#Et on prépare la fonction move_uploaded_file qui va créer la photo dans le server :
+							$repertoire_photos_section = "photos/$section_id/";
+							if (!is_dir($repertoire_photos_section)) {
+								mkdir($repertoire_photos_section);
+							}
+							$functions_MUF[] = move_uploaded_file($_FILES[$nom_champ_photo]['tmp_name'], $repertoire_photos_section.$nomImage);
+
+						}
+					}
 				}
-			}
-		} 		
 
-	}
+				#Pour chaque champ de photo, on exécute la requête préparée :
+				foreach ($SQL_photos as $UPDATE_INSERT_photo) {
+					if (!empty($UPDATE_INSERT_photo)) {
+						$bdd->query($UPDATE_INSERT_photo);
+					}	
+				}
+
+				#Crées les photos sur le serveur :
+				foreach ($functions_MUF as $MUF) {
+					if (!empty($MUF)) {
+						$MUF;
+					}
+				}
+
+				if (empty($erreurs_photo)) {
+					header("Refresh:0; url=section.php?id=$section_id");
+				} else {
+					foreach ($erreurs_photo as $erreur) {
+						echo $nom_champ_photo . " : " . $erreur . "<br>" ;
+					}
+				}
+
+			} 
+		}
+	} 		
+
+
 
 		#Une fonction pour automatiser les menus déroulants :
 		function set_default_select($options, $current_default){
